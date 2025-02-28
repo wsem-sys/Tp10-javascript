@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TP 10 – Formulaire HTML</title>
+  <style>
+    /* --------------------------------
+       Feuilles de style (normes de codage)
+       -------------------------------- */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      color: #1e90ff;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    label {
+      margin-right: 8px;
+    }
+    input[type="number"] {
+      width: 80px;
+      margin-right: 10px;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    table {
+      width: 60%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    img {
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Exercice Filtrage Polluants</h1>
+
+  <!-- Formulaire de saisie MIN / MAX -->
+  <form id="pollutionForm">
+    <label for="minInput">Minimum</label>
+    <input type="number" id="minInput" name="minInput" placeholder="Ex : 1">
+    
+    <label for="maxInput">Maximum</label>
+    <input type="number" id="maxInput" name="maxInput" placeholder="Ex : 10">
+
+    <button type="submit">Valider</button>
+  </form>
+
+  <!-- Tableau d'affichage des résultats -->
+  <table>
+    <thead>
+      <tr>
+        <th></th>        <!-- Colonne pour le drapeau -->
+        <th>Nom</th>
+        <th>Valeur (milliards de tonnes)</th>
+        <th>%</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+
+  <script>
+    // URL des données
+    const URL_POLLUTION = "https://digicode.cleverapps.io/json/pays/pollution";
+
+    // Sélection des éléments du DOM
+    const form = document.getElementById('pollutionForm');
+    const resultsBody = document.getElementById('resultsBody');
+    const minInput = document.getElementById('minInput');
+    const maxInput = document.getElementById('maxInput');
+
+    // Écoute de l'événement "submit" du formulaire
+    form.addEventListener('submit', function(event) {
+      event.preventDefault(); // Empêche le rechargement de page
+
+      // Récupération des valeurs MIN et MAX
+      let min = parseFloat(minInput.value);
+      let max = parseFloat(maxInput.value);
+
+      // Application des règles de gestion :
+      // 1) Si le champ MIN est vide => on considère min = 0
+      if (isNaN(min)) {
+        min = 0;
+      }
+      // 2) Si le champ MAX est vide => on considère max = Number.MAX_VALUE
+      if (isNaN(max)) {
+        max = Number.MAX_VALUE;
+      }
+      // 3) Vérifier si min ou max sont négatifs => alerte et on sort
+      if (min < 0 || max < 0) {
+        alert("Veuillez saisir des valeurs positives pour MIN et MAX.");
+        return; // On arrête ici
+      }
+      // 4) Vérifier si min > max => alerte et on sort
+      if (min > max) {
+        alert("Le minimum ne peut pas être supérieur au maximum !");
+        return; // On arrête ici
+      }
+
+      // Appel de la fonction pour charger et filtrer les données
+      chargerEtFiltrerDonnees(min, max);
+    });
+
+    /**
+     * Fonction qui charge les données JSON, les filtre selon MIN/MAX,
+     * et les affiche dans le tableau.
+     * @param {number} min Valeur minimale
+     * @param {number} max Valeur maximale
+     */
+    function chargerEtFiltrerDonnees(min, max) {
+      fetch(URL_POLLUTION)
+        .then(response => response.json())
+        .then(donnees => {
+          // Nettoyer le tbody avant d'insérer le nouveau filtrage
+          resultsBody.innerHTML = "";
+
+          // Filtrer les pays dont la valeur est comprise entre min et max
+          const paysFiltres = donnees.filter(pays => {
+            return pays.valeur >= min && pays.valeur <= max;
+          });
+
+          // Afficher chaque pays filtré dans le tableau
+          paysFiltres.forEach(pays => {
+            // Création de la ligne
+            const tr = document.createElement('tr');
+
+            // Création de la cellule pour le drapeau
+            const tdDrapeau = document.createElement('td');
+            // Création de l'image du drapeau
+            const drapeau = document.createElement('img');
+            // IMPORTANT : utilisation de l'URL indiquée pour le drapeau
+            // (respect strict de la consigne)
+            drapeau.src = "https://flagcdn.com/24x18/" + pays.code + ".png";
+            drapeau.alt = pays.code; 
+            tdDrapeau.appendChild(drapeau);
+            tr.appendChild(tdDrapeau);
+
+            // Nom du pays
+            const tdNom = document.createElement('td');
+            tdNom.textContent = pays.nom;
+            tr.appendChild(tdNom);
+
+            // Valeur (milliards de tonnes)
+            const tdValeur = document.createElement('td');
+            tdValeur.textContent = pays.valeur;
+            tr.appendChild(tdValeur);
+
+            // Pourcentage
+            const tdPourcentage = document.createElement('td');
+            tdPourcentage.textContent = pays.pourcentage;
+            tr.appendChild(tdPourcentage);
+
+            // Injection de la ligne dans le tableau
+            resultsBody.appendChild(tr);
+          });
+        })
+        .catch(err => {
+          console.error("Une erreur s'est produite lors du chargement des données :", err);
+        });
+    }
+
+    // Au premier chargement de la page, on affiche tout (min=0, max=Number.MAX_VALUE)
+    chargerEtFiltrerDonnees(0, Number.MAX_VALUE);
+  </script>
+</body>
+</html>
